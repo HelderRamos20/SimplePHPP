@@ -3,4 +3,4 @@ CREATE TABLE carros(
     nombre VARCHAR(255),
     marca VARCHAR(128),
     estado CHAR(3)
-) COMMENT 'Tabla de carros de la flota de';
+) COMMENT 'Tabla de carros de la flota de carros';
