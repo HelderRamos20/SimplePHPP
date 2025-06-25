@@ -4,29 +4,91 @@ namespace Controllers\Mantenimientos\Productos;
 
 use Controllers\PublicController;
 use Dao\Producto\Categorias as CategoriasDAO;
+use Utilities\Site;
 use Views\Renderer;
+
+const LIST_URL = "index.php?page=Mantenimientos-Productos-Categorias";
 
 class Categoria extends PublicController
 {
-    private array $viewData = [];
+    private array $viewData;
+    private array $modes;
     public function __construct()
     {
+        $this->modes = [
+            "INS" => 'Creando nueva Categoría',
+            "UPD" => 'Modificando Categoría %s %s',
+            "DEL" => 'Eliminado Categoría %s %s',
+            "DSP" => 'Mostrando Detalle de %s %s'
+        ];
         $this->viewData = [
             "id" => 0,
-            "categorias" => "",
-            "estado" => "ACT"
+            "categoria" => "",
+            "estado" => "ACT",
+            "mode" => "",
+            "modeDsc" => "",
+            "estadoACT" => "",
+            "estadoINA" => "",
+            "estadoRTR" => "",
         ];
     }
     public function run(): void
     {
-        if(isset($_GET["id"]) && is_numeric($_GET["id"])) {
-            $this->viewData["id"] = intval($_GET["id"]);
-            $categoria = CategoriasDAO::getCategoriasById($this->viewData["id"]);
-            if(count($categoria) > 0) {
-                $this->viewData["categorias"] = $this->viewData["categoria"];
-                $this->viewData["estado"] = $categoria["estado"];
+        /*
+        1. Capturamos el Modo del Formuario
+        2. Capturar la Data de la DB si no es INS
+        3. Si es un Postback 
+            3.1 Capturar la Data del Formulario
+            3.2 Validar la informacion del Formulario
+            3.3 Segun el modo llamar la función del DAO
+            3.4 Enviar a Listado
+        4. Prepara los datos de la vista
+        5. Renderizar la vista.
+        */
+        $this->capturarModoPantalla();
+        $this->datosDeDao();
+
+        $this->prepararVista();
+        Renderer::render("mnt/productos/categoria", $this->viewData);
+    }
+
+    private function throwError(string $message)
+    {
+        Site::redirectToWithMsg(LIST_URL, $message);
+    }
+    private function capturarModoPantalla()
+    {
+        if (isset($_GET["mode"])) {
+            $this->viewData["mode"] = $_GET["mode"];
+            if (!isset($this->modes[$this->viewData["mode"]])) {
+                $this->throwError("BAD REQUEST: No se puede procesar su solicitud.");
             }
         }
-        Renderer::render("mnt/productos/categoria", $this->viewData);
+    }
+    private function datosDeDao()
+    {
+        if ($this->viewData["mode"] != "INS") {
+            if (isset($_GET["id"])) {
+                $this->viewData["id"] = intval($_GET["id"]);
+                $categoria = CategoriasDAO::getCategoriasById($this->viewData["id"]);
+                if (count($categoria) > 0) {
+                    $this->viewData["categoria"] = $categoria["categoria"];
+                    $this->viewData["estado"] = $categoria["estado"];
+                } else {
+                    $this->throwError("BAD REQUEST: No existe registro en la DB");
+                }
+            } else {
+                $this->throwError("BAD REQUEST: No se puede extraer el registro de la DB");
+            }
+        }
+    }
+    private function prepararVista()
+    {
+        $this->viewData["modeDsc"] = sprintf(
+            $this->modes[$this->viewData["mode"]],
+            $this->viewData["categoria"],
+            $this->viewData["id"]
+        );
+        $this->viewData["estado" . $this->viewData["estado"]] = 'selected';
     }
 }
