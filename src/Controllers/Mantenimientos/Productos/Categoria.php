@@ -5,6 +5,7 @@ namespace Controllers\Mantenimientos\Productos;
 use Controllers\PublicController;
 use Dao\Producto\Categorias as CategoriasDAO;
 use Utilities\Site;
+use Utilities\Validators;
 use Views\Renderer;
 
 const LIST_URL = "index.php?page=Mantenimientos-Productos-Categorias";
@@ -12,6 +13,7 @@ const LIST_URL = "index.php?page=Mantenimientos-Productos-Categorias";
 class Categoria extends PublicController
 {
     private array $viewData;
+    private array $estados;
     private array $modes;
     public function __construct()
     {
@@ -21,6 +23,7 @@ class Categoria extends PublicController
             "DEL" => 'Eliminado Categoría %s %s',
             "DSP" => 'Mostrando Detalle de %s %s'
         ];
+        $this->estados = ["ACT", "INA", "RTR"];
         $this->viewData = [
             "id" => 0,
             "categoria" => "",
@@ -30,6 +33,7 @@ class Categoria extends PublicController
             "estadoACT" => "",
             "estadoINA" => "",
             "estadoRTR" => "",
+            "errores" => []
         ];
     }
     public function run(): void
@@ -47,6 +51,13 @@ class Categoria extends PublicController
         */
         $this->capturarModoPantalla();
         $this->datosDeDao();
+        if ($this->isPostBack()) {
+            $this->datosFormulario();
+            $this->validarDatos();
+            if (count($this->viewData["errores"]) === 0) {
+                $this->procesarDatos();
+            }
+        }
 
         $this->prepararVista();
         Renderer::render("mnt/productos/categoria", $this->viewData);
@@ -70,7 +81,7 @@ class Categoria extends PublicController
         if ($this->viewData["mode"] != "INS") {
             if (isset($_GET["id"])) {
                 $this->viewData["id"] = intval($_GET["id"]);
-                $categoria = CategoriasDAO::getCategoriasById($this->viewData["id"]);
+                $categoria = CategoriasDAO::getCateoriasById($this->viewData["id"]);
                 if (count($categoria) > 0) {
                     $this->viewData["categoria"] = $categoria["categoria"];
                     $this->viewData["estado"] = $categoria["estado"];
@@ -82,6 +93,52 @@ class Categoria extends PublicController
             }
         }
     }
+    private function datosFormulario()
+    {
+        if (isset($_POST["categoria"])) {
+            $tmpCategoria = $_POST["categoria"];
+            $this->viewData["categoria"] = $tmpCategoria;
+        }
+        if (isset($_POST["estado"])) {
+            $tmpEstado = $_POST["estado"];
+            $this->viewData["estado"] = $tmpEstado;
+        }
+    }
+    private function validarDatos()
+    {
+        if (Validators::IsEmpty($this->viewData["categoria"])) {
+            $this->viewData["errores"]["categoria"] = "La categoría es requerida";
+        }
+        if (!in_array($this->viewData["estado"], $this->estados)) {
+            $this->viewData["errores"]["estado"] = "El valor del estado no es correcto";
+        }
+    }
+
+    private function procesarDatos()
+    {
+        switch ($this->viewData["mode"]) {
+            case "INS":
+                if (
+                    CategoriasDAO::nuevaCategoria(
+                        $this->viewData["categoria"],
+                        $this->viewData["estado"]
+                    ) > 0
+                ) {
+                    Site::redirectToWithMsg(LIST_URL, "Categoría agregada existosamente.");
+                } else {
+                    if (isset($this->viewData["errores"]["global"])) {
+                        $this->viewData["errores"]["global"][] = "Error al crear nueva categoría.";
+                    } else {
+                        $this->viewData["errores"]["global"] = ["Error al crear nueva categoría."];
+                    }
+                }
+                break;
+            case "UPD":
+                break;
+            case "DEL":
+                break;
+        }
+    }
     private function prepararVista()
     {
         $this->viewData["modeDsc"] = sprintf(
@@ -90,5 +147,10 @@ class Categoria extends PublicController
             $this->viewData["id"]
         );
         $this->viewData["estado" . $this->viewData["estado"]] = 'selected';
+        if (count($this->viewData["errores"]) > 0) {
+            foreach ($this->viewData["errores"] as $campo => $error) {
+                $this->viewData['error_' . $campo] = $error;
+            }
+        }
     }
 }

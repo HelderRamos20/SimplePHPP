@@ -1,23 +1,32 @@
 <?php
 
-namespace Controllers\Mantenimientos\Productos;
+namespace Dao\Producto;
 
-use Controllers\PublicController;
-use Dao\Producto\Categorias as CategoriasDAO;
-use Views\Renderer;
+use Dao\Table;
 
-class Categorias extends PublicController
+class Categorias extends Table
 {
-    private array $viewData = [];
-    public function __construct()
+
+    public static function getCategorias()
     {
-        $this->viewData = [
-            "categorias" => []
-        ];
+        $sqlstr = "SELECT * from categorias;";
+        return self::obtenerRegistros($sqlstr, []);
     }
-    public function run(): void
+
+    public static function getCateoriasById(int $categoriaId)
     {
-        $this->viewData["categorias"] = CategoriasDAO::getCategorias();
-        Renderer::render("mnt/productos/categorias", $this->viewData);
+        $sqlstr = "SELECT * from categorias where id = :id;";
+        return self::obtenerUnRegistro($sqlstr, ["id" => $categoriaId]);
+    }
+    public static function nuevaCategoria(string $categoria, string $estado)
+    {
+        $sqlstr = "INSERT INTO categorias (categoria, estado) VALUES (:categoria, :estado);";
+        return self::executeNonQuery(
+            $sqlstr,
+            [
+                "categoria" => $categoria,
+                "estado" => $estado
+            ]
+        );
     }
 }
