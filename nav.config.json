@@ -12,7 +12,7 @@
     },
     {
       "id": "Menu_Products",
-      "nav_url": "index.php?page=Products_Products",
+      "nav_url": "index.php?page=Products",
       "nav_label":"<i class=\"fas fa-table\"></i>&nbsp;WW Productos"
     }
   ],
